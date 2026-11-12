@@ -44,7 +44,7 @@
         <hr class="divisor">
 
         <section class="area-foto">
-            <p class="dica-carrossel">✨ Arraste para o lado para ver nossas fotos ✨</p>
+        
 
             <div class="carrossel-wrapper">
                 <!-- Botão voltar (computador/celular) -->
@@ -167,32 +167,71 @@
             });
         }
 
-        btnAnterior.addEventListener('click', () => {
+        function voltarFoto() {
             const largura = larguraDoSlide();
+            if (!largura) return;
             let posAtual = Math.round(carrossel.scrollLeft / largura);
             if (posAtual <= 0) {
                 carrossel.scrollLeft = total * largura;
-                posAtual = total;
+                requestAnimationFrame(() => irParaPosicao(total - 1));
+            } else {
+                irParaPosicao(posAtual - 1);
             }
-            irParaPosicao(posAtual - 1);
-        });
+        }
 
-        btnProximo.addEventListener('click', () => {
+        function avancarFoto() {
             const largura = larguraDoSlide();
+            if (!largura) return;
             let posAtual = Math.round(carrossel.scrollLeft / largura);
             if (posAtual >= total + 1) {
                 carrossel.scrollLeft = largura;
-                posAtual = 1;
+                requestAnimationFrame(() => irParaPosicao(2));
+            } else {
+                irParaPosicao(posAtual + 1);
             }
-            irParaPosicao(posAtual + 1);
+        }
+
+        // ==========================================
+        // PASSAR FOTOS SOZINHO A CADA 1 SEGUNDO
+        // ==========================================
+        const TEMPO_TROCA = 2000; // 2000ms = 2 segundos
+        let intervaloAutoPlay = null;
+
+        function iniciarAutoPlay() {
+            pararAutoPlay();
+            intervaloAutoPlay = setInterval(avancarFoto, TEMPO_TROCA);
+        }
+
+        function pararAutoPlay() {
+            if (intervaloAutoPlay) {
+                clearInterval(intervaloAutoPlay);
+                intervaloAutoPlay = null;
+            }
+        }
+
+        iniciarAutoPlay();
+
+        btnAnterior.addEventListener('click', () => {
+            voltarFoto();
+            iniciarAutoPlay();
+        });
+
+        btnProximo.addEventListener('click', () => {
+            avancarFoto();
+            iniciarAutoPlay();
         });
 
         pontos.forEach((ponto) => {
             ponto.addEventListener('click', () => {
                 const indexFoto = Number(ponto.dataset.index);
                 irParaPosicao(indexFoto + 1);
+                iniciarAutoPlay();
             });
         });
+
+        // Pausa enquanto o dedo estiver na tela do celular e retoma ao soltar
+        carrossel.addEventListener('touchstart', pararAutoPlay, { passive: true });
+        carrossel.addEventListener('touchend', iniciarAutoPlay, { passive: true });
 
         // Permite arrastar com o mouse no computador com loop infinito
         let arrastando = false;
@@ -200,6 +239,7 @@
         let scrollInicial = 0;
 
         carrossel.addEventListener('mousedown', (e) => {
+            pararAutoPlay();
             arrastando = true;
             carrossel.classList.add('arrastando');
             inicioX = e.pageX - carrossel.offsetLeft;
@@ -212,6 +252,7 @@
             carrossel.classList.remove('arrastando');
             const posMaisProxima = Math.round(carrossel.scrollLeft / larguraDoSlide());
             irParaPosicao(posMaisProxima);
+            iniciarAutoPlay();
         });
 
         carrossel.addEventListener('mousemove', (e) => {
